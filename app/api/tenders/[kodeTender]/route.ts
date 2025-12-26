@@ -15,10 +15,10 @@ export async function GET(
   { params }: { params: Promise<{ kodeTender: string }> }
 ) {
   const { kodeTender } = await params
-  const kodeTenderInt = parseTenderIdParam(kodeTender)
+  const kodeTenderValue = parseTenderIdParam(kodeTender)
   const routeName = 'api.tenders.detail'
 
-  if (kodeTenderInt === null) {
+  if (kodeTenderValue === null) {
     return NextResponse.json(
       { success: false, error: 'Invalid kode_tender format' },
       { status: 400, headers: withCors() }
@@ -26,7 +26,7 @@ export async function GET(
   }
 
   const startTime = performance.now()
-  const cacheKey = tenderDetailKey(kodeTenderInt)
+  const cacheKey = tenderDetailKey(kodeTenderValue)
   const bypassCache = request.headers.get('x-cache-bypass') === '1'
 
   if (!bypassCache) {
@@ -50,7 +50,7 @@ export async function GET(
   try {
     const prisma = await getPrisma()
     const tender = await prisma.tender.findUnique({
-      where: { kode_tender: kodeTenderInt },
+      where: { kode_tender: kodeTenderValue },
       include: {
         lpse: true,
         tender_details: true
