@@ -91,8 +91,8 @@ export function parseTendersQuery(searchParams: URLSearchParams) {
 }
 
 export function parseTenderIdParam(value: string) {
-  const parsed = Number.parseInt(value, 10)
-  return Number.isFinite(parsed) ? parsed : null
+  // kode_tender is VARCHAR in database, return as string
+  return value && value.trim() ? value.trim() : null
 }
 
 function toNumber(value: unknown) {
