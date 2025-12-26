@@ -26,7 +26,16 @@ async function getRedisClient() {
   }
 
   if (!globalThis.redisClientPromise) {
-    const client = createClient({ url: REDIS_URL })
+    const client = createClient({
+      url: REDIS_URL,
+      socket: {
+        connectTimeout: 5000, // 5 second timeout
+        reconnectStrategy: (retries) => {
+          if (retries > 3) return false // Stop after 3 retries
+          return Math.min(retries * 100, 1000)
+        }
+      }
+    })
     client.on('error', (error) => {
       if (!globalThis.redisUnavailableLogged) {
         globalThis.redisUnavailableLogged = true
@@ -34,11 +43,25 @@ async function getRedisClient() {
       }
     })
 
-    globalThis.redisClientPromise = client.connect().then(() => {
+    // Add connection timeout
+    const connectPromise = client.connect().then(() => {
       globalThis.redisClient = client
       globalThis.redisUnavailableLogged = false
       return client
     })
+
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
+    })
+
+    globalThis.redisClientPromise = Promise.race([connectPromise, timeoutPromise])
+      .catch((error) => {
+        if (!globalThis.redisUnavailableLogged) {
+          globalThis.redisUnavailableLogged = true
+          console.warn('[cache] Redis connection failed:', error)
+        }
+        return null
+      }) as Promise<RedisClient>
   }
 
   try {
