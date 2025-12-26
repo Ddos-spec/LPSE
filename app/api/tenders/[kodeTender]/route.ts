@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+
+const getPrisma = () => import('@/lib/prisma').then(m => m.default)
 import { ApiResponse, ApiTenderFullDetail } from '@/lib/types'
 import { cacheGet, cacheSet, CACHE_TTLS } from '@/lib/cache'
 import { tenderDetailKey } from '@/lib/cache-keys'
@@ -44,6 +47,7 @@ export async function GET(
   }
 
   try {
+    const prisma = await getPrisma()
     const tender = await prisma.tender.findUnique({
       where: { kode_tender: kodeTenderInt },
       include: {

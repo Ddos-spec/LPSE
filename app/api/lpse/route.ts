@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+
+// Dynamic import to avoid build-time issues
+const getPrisma = () => import('@/lib/prisma').then(m => m.default)
 import { ApiResponse } from '@/lib/types'
 import { cacheGet, cacheSet, CACHE_TTLS } from '@/lib/cache'
 import { lpseListKey } from '@/lib/cache-keys'
@@ -30,6 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const prisma = await getPrisma()
     const lpseList = await prisma.lpse.findMany({
       orderBy: {
         nama_lpse: 'asc'
