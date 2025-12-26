@@ -59,12 +59,12 @@ export function TenderTable({ tenders, className }: TenderTableProps) {
                   </Link>
                   {/* Mobile: Show LPSE name below tender name */}
                   <span className="text-xs text-muted-foreground md:hidden block mt-1">
-                    {truncateText(tender.lpse.nama_lpse, 40)}
+                    {truncateText(tender.lpse?.nama_lpse ?? '-', 40)}
                   </span>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <span className="text-sm text-muted-foreground line-clamp-1">
-                    {truncateText(tender.lpse.nama_lpse, 30)}
+                    {truncateText(tender.lpse?.nama_lpse ?? '-', 30)}
                   </span>
                 </TableCell>
                 <TableCell className="text-right font-medium">
@@ -107,7 +107,7 @@ export function TenderListItem({ tender }: TenderListItemProps) {
             {tender.nama_tender}
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-1">
-            {tender.lpse.nama_lpse}
+            {tender.lpse?.nama_lpse ?? '-'}
           </p>
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
             <p className="font-bold text-primary">

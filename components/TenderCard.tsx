@@ -28,16 +28,16 @@ export function TenderCard({ tender }: TenderCardProps) {
           {/* LPSE Info */}
           <div className="flex items-start gap-2 text-sm text-muted-foreground">
             <Building2 className="h-4 w-4 shrink-0 mt-0.5" />
-            <span className="line-clamp-1">{tender.lpse.nama_lpse}</span>
+            <span className="line-clamp-1">{tender.lpse?.nama_lpse ?? '-'}</span>
           </div>
 
           {/* Location */}
-          {tender.lpse.provinsi && (
+          {tender.lpse?.provinsi && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4 shrink-0" />
               <span>
-                {tender.lpse.kota ? `${tender.lpse.kota}, ` : ''}
-                {tender.lpse.provinsi}
+                {tender.lpse?.kota ? `${tender.lpse.kota}, ` : ''}
+                {tender.lpse?.provinsi}
               </span>
             </div>
           )}
