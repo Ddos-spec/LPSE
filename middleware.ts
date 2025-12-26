@@ -8,14 +8,66 @@ import {
 } from '@/lib/cache-keys'
 import { parseTendersQuery } from '@/lib/transform'
 
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
+const ALLOW_ANY_ORIGIN = ALLOWED_ORIGINS.includes('*')
+
+function getCorsOrigin(origin: string | null) {
+  if (!origin) return null
+  if (ALLOW_ANY_ORIGIN) return '*'
+  return ALLOWED_ORIGINS.includes(origin) ? origin : null
+}
+
+function appendVaryHeader(response: NextResponse, value: string) {
+  const existing = response.headers.get('Vary')
+  if (!existing) {
+    response.headers.set('Vary', value)
+    return
+  }
+
+  const values = existing.split(',').map((entry) => entry.trim().toLowerCase())
+  if (!values.includes(value.toLowerCase())) {
+    response.headers.set('Vary', `${existing}, ${value}`)
+  }
+}
+
+function applyCorsHeaders(response: NextResponse, origin: string | null) {
+  if (!origin) return
+  response.headers.set('Access-Control-Allow-Origin', origin)
+  response.headers.set('Access-Control-Allow-Methods', 'GET,OPTIONS')
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  if (origin !== '*') {
+    appendVaryHeader(response, 'Origin')
+  }
+}
+
 export function middleware(request: NextRequest) {
-  if (request.method !== 'GET') {
+  const { pathname, searchParams } = request.nextUrl
+  const isApi = pathname.startsWith('/api')
+  const backendOnly = process.env.BACKEND_ONLY === 'true'
+  const corsOrigin = getCorsOrigin(request.headers.get('origin'))
+
+  if (backendOnly && !isApi) {
+    return new NextResponse('Not Found', { status: 404 })
+  }
+
+  if (isApi && request.method === 'OPTIONS') {
+    const response = new NextResponse(null, { status: 204 })
+    applyCorsHeaders(response, corsOrigin)
+    return response
+  }
+
+  if (!isApi) {
     return NextResponse.next()
   }
 
-  const { pathname, searchParams } = request.nextUrl
-  if (!pathname.startsWith('/api')) {
-    return NextResponse.next()
+  if (request.method !== 'GET') {
+    const response = NextResponse.next()
+    applyCorsHeaders(response, corsOrigin)
+    return response
   }
 
   const headers = new Headers(request.headers)
@@ -61,9 +113,11 @@ export function middleware(request: NextRequest) {
     response.headers.set('x-cache-key', cacheKey)
   }
 
+  applyCorsHeaders(response, corsOrigin)
+
   return response
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }

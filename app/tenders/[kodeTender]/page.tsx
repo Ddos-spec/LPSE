@@ -22,14 +22,15 @@ import { TenderDetailSkeleton } from '@/components/LoadingState'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format'
 import type { ApiResponse, ApiTenderFullDetail } from '@/lib/types'
 
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/$/, '')
+
 interface TenderDetailPageProps {
   params: Promise<{ kodeTender: string }>
 }
 
 async function getTender(kodeTender: string): Promise<ApiTenderFullDetail | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
-    const response = await fetch(`${baseUrl}/api/tenders/${kodeTender}`, {
+    const response = await fetch(`${API_BASE_URL}/api/tenders/${kodeTender}`, {
       cache: 'no-store',
     })
 

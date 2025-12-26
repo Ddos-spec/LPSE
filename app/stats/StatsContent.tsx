@@ -29,6 +29,8 @@ import {
   Legend,
 } from 'recharts'
 
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
+
 const COLORS = [
   '#3B82F6', // Blue
   '#10B981', // Green
@@ -53,7 +55,7 @@ export function StatsContent() {
       setError(null)
 
       try {
-        const response = await fetch('/api/stats')
+        const response = await fetch(`${API_BASE_URL}/api/stats`)
         const data: ApiResponse<TenderStats> = await response.json()
 
         if (!data.success) {
