@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+
+// Force dynamic to prevent build-time execution
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const checks: Record<string, unknown> = {
@@ -16,41 +18,40 @@ export async function GET() {
     }
   }
 
-  // Test database connection
-  try {
-    const result = await prisma.$queryRaw<{ now: Date }[]>`SELECT NOW() as now`
-    checks.database = {
-      status: 'connected',
-      serverTime: result[0]?.now
-    }
-  } catch (error) {
-    checks.database = {
-      status: 'error',
-      error: error instanceof Error ? error.message : String(error)
-    }
-  }
+  // Only test database if DATABASE_URL is set
+  if (process.env.DATABASE_URL) {
+    try {
+      // Dynamic import to avoid build-time issues
+      const { default: prisma } = await import('@/lib/prisma')
 
-  // Test if tables exist
-  try {
-    const [tenderCount, lpseCount] = await Promise.all([
-      prisma.tender.count(),
-      prisma.lpse.count()
-    ])
-    checks.tables = {
-      status: 'ok',
-      tenders: tenderCount,
-      lpse: lpseCount
+      const result = await prisma.$queryRaw<{ now: Date }[]>`SELECT NOW() as now`
+      checks.database = {
+        status: 'connected',
+        serverTime: result[0]?.now
+      }
+
+      // Test if tables exist
+      const [tenderCount, lpseCount] = await Promise.all([
+        prisma.tender.count(),
+        prisma.lpse.count()
+      ])
+      checks.tables = {
+        status: 'ok',
+        tenders: tenderCount,
+        lpse: lpseCount
+      }
+    } catch (error) {
+      checks.database = {
+        status: 'error',
+        error: error instanceof Error ? error.message : String(error)
+      }
     }
-  } catch (error) {
-    checks.tables = {
-      status: 'error',
-      error: error instanceof Error ? error.message : String(error)
-    }
+  } else {
+    checks.database = { status: 'skipped', reason: 'DATABASE_URL not set' }
   }
 
   const hasErrors =
-    (checks.database as Record<string, unknown>)?.status === 'error' ||
-    (checks.tables as Record<string, unknown>)?.status === 'error'
+    (checks.database as Record<string, unknown>)?.status === 'error'
 
   checks.status = hasErrors ? 'unhealthy' : 'healthy'
 
