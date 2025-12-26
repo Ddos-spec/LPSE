@@ -45,38 +45,19 @@ export async function GET(request: NextRequest) {
   try {
     const prisma = await getPrisma()
 
-    if (filters.search && shouldUseFtsSearch()) {
-      const result = await searchTenderIds(filters, { skip, limit })
-      monitoring.recordDbQuery(routeName, 2)
-      total = result.total
-
-      if (result.kodeTenders.length > 0) {
-        const tenderRows = await prisma.tender.findMany({
-          where: { kode_tender: { in: result.kodeTenders } },
-          include: { lpse: true },
-        })
-        monitoring.recordDbQuery(routeName, 1)
-        const tenderMap = new Map(tenderRows.map(t => [t.kode_tender, t]))
-        tenders = result.kodeTenders
-          .map(id => tenderMap.get(id))
-          .filter((t): t is TenderWithLpse => Boolean(t)) as TenderWithLpse[]
-      }
-    } else {
-      const where = buildTenderWhere(filters)
-      const [rows, count] = await Promise.all([
-        prisma.tender.findMany({
-          where,
-          take: limit,
-          skip,
-          orderBy: { created_at: 'desc' },
-          include: { lpse: true },
-        }),
-        prisma.tender.count({ where }),
-      ])
-      monitoring.recordDbQuery(routeName, 2)
-      tenders = rows
-      total = count
-    }
+    // Simplified query - bypass all FTS/complex logic for testing
+    const [rows, count] = await Promise.all([
+      prisma.tender.findMany({
+        take: limit,
+        skip,
+        orderBy: { created_at: 'desc' },
+        include: { lpse: true },
+      }),
+      prisma.tender.count(),
+    ])
+    monitoring.recordDbQuery(routeName, 2)
+    tenders = rows
+    total = count
 
     const totalPages = Math.ceil(total / limit)
     const hasMore = page < totalPages
