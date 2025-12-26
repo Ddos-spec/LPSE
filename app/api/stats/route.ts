@@ -8,6 +8,7 @@ import { cacheGet, cacheSet, warmCacheOnce, CACHE_TTLS } from '@/lib/cache'
 import { lpseListKey, statsKey, tendersListKey } from '@/lib/cache-keys'
 import { normalizeTenderList } from '@/lib/transform'
 import { monitoring } from '@/lib/monitoring'
+import { withCors } from '@/lib/cors'
 
 export async function GET(request: NextRequest) {
   const startTime = performance.now()
@@ -23,11 +24,11 @@ export async function GET(request: NextRequest) {
       monitoring.recordTiming(routeName, duration)
       monitoring.logIfNeeded(routeName)
       return NextResponse.json(cached, {
-        headers: {
+        headers: withCors({
           'x-cache': 'HIT',
           'x-cache-key': cacheKey,
           'x-response-time': `${duration.toFixed(2)}ms`,
-        },
+        }),
       })
     }
     monitoring.recordCacheMiss(routeName)
@@ -183,11 +184,11 @@ export async function GET(request: NextRequest) {
     monitoring.recordTiming(routeName, duration)
 
     return NextResponse.json(response, {
-      headers: {
+      headers: withCors({
         'x-cache': bypassCache ? 'BYPASS' : 'MISS',
         'x-cache-key': cacheKey,
         'x-response-time': `${duration.toFixed(2)}ms`,
-      },
+      }),
     })
 
   } catch (error) {
@@ -204,7 +205,7 @@ export async function GET(request: NextRequest) {
         error: 'Internal Server Error',
         details: process.env.NODE_ENV !== 'production' ? errorMessage : undefined
       },
-      { status: 500 }
+      { status: 500, headers: withCors() }
     )
   } finally {
     monitoring.logIfNeeded(routeName)

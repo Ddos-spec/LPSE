@@ -8,6 +8,7 @@ import { cacheGet, cacheSet, CACHE_TTLS } from '@/lib/cache'
 import { tenderDetailKey } from '@/lib/cache-keys'
 import { normalizeTenderFull, parseTenderIdParam } from '@/lib/transform'
 import { monitoring } from '@/lib/monitoring'
+import { withCors } from '@/lib/cors'
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +21,7 @@ export async function GET(
   if (kodeTenderInt === null) {
     return NextResponse.json(
       { success: false, error: 'Invalid kode_tender format' },
-      { status: 400 }
+      { status: 400, headers: withCors() }
     )
   }
 
@@ -36,11 +37,11 @@ export async function GET(
       monitoring.recordTiming(routeName, duration)
       monitoring.logIfNeeded(routeName)
       return NextResponse.json(cached, {
-        headers: {
+        headers: withCors({
           'x-cache': 'HIT',
           'x-cache-key': cacheKey,
           'x-response-time': `${duration.toFixed(2)}ms`,
-        },
+        }),
       })
     }
     monitoring.recordCacheMiss(routeName)
@@ -63,7 +64,7 @@ export async function GET(
     if (!tender) {
       return NextResponse.json(
         { success: false, error: 'Tender not found' },
-        { status: 404 }
+        { status: 404, headers: withCors() }
       )
     }
 
@@ -78,11 +79,11 @@ export async function GET(
     monitoring.recordTiming(routeName, duration)
 
     return NextResponse.json(response, {
-      headers: {
+      headers: withCors({
         'x-cache': bypassCache ? 'BYPASS' : 'MISS',
         'x-cache-key': cacheKey,
         'x-response-time': `${duration.toFixed(2)}ms`,
-      },
+      }),
     })
 
   } catch (error) {
@@ -99,7 +100,7 @@ export async function GET(
         error: 'Internal Server Error',
         details: process.env.NODE_ENV !== 'production' ? errorMessage : undefined
       },
-      { status: 500 }
+      { status: 500, headers: withCors() }
     )
   } finally {
     monitoring.logIfNeeded(routeName)
