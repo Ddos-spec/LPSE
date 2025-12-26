@@ -98,6 +98,7 @@ export function parseTenderIdParam(value: string) {
 function toNumber(value: unknown) {
   if (value === null || value === undefined) return null
   if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value === 'bigint') return Number(value)
   if (typeof value === 'string') {
     const parsed = Number(value)
     return Number.isFinite(parsed) ? parsed : null
