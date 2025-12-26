@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-// Dynamic import to avoid build-time issues
 const getPrisma = () => import('@/lib/prisma').then(m => m.default)
 import { ApiResponse } from '@/lib/types'
 import { cacheGet, cacheSet, CACHE_TTLS } from '@/lib/cache'
 import { lpseListKey } from '@/lib/cache-keys'
 import { monitoring } from '@/lib/monitoring'
+import { withCors } from '@/lib/cors'
 
 export async function GET(request: NextRequest) {
   const startTime = performance.now()
@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
       monitoring.recordTiming(routeName, duration)
       monitoring.logIfNeeded(routeName)
       return NextResponse.json(cached, {
-        headers: {
+        headers: withCors({
           'x-cache': 'HIT',
           'x-cache-key': cacheKey,
           'x-response-time': `${duration.toFixed(2)}ms`,
-        },
+        }),
       })
     }
     monitoring.recordCacheMiss(routeName)
@@ -54,11 +54,11 @@ export async function GET(request: NextRequest) {
     monitoring.recordTiming(routeName, duration)
 
     return NextResponse.json(response, {
-      headers: {
+      headers: withCors({
         'x-cache': bypassCache ? 'BYPASS' : 'MISS',
         'x-cache-key': cacheKey,
         'x-response-time': `${duration.toFixed(2)}ms`,
-      },
+      }),
     })
 
   } catch (error) {
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         error: 'Internal Server Error',
         details: process.env.NODE_ENV !== 'production' ? errorMessage : undefined
       },
-      { status: 500 }
+      { status: 500, headers: withCors() }
     )
   } finally {
     monitoring.logIfNeeded(routeName)
