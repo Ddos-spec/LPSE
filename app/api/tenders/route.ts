@@ -106,9 +106,21 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     monitoring.recordError(routeName)
-    console.error('Error fetching tenders:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('Error fetching tenders:', {
+      message: errorMessage,
+      stack: errorStack,
+      filters,
+      page,
+      limit
+    })
     return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
+      {
+        success: false,
+        error: 'Internal Server Error',
+        details: process.env.NODE_ENV !== 'production' ? errorMessage : undefined
+      },
       { status: 500 }
     )
   } finally {
