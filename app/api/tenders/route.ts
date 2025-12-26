@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+
+const getPrisma = () => import('@/lib/prisma').then(m => m.default)
 import type { Prisma } from '@prisma/client'
 import { ApiResponse, PaginationMeta, ApiTenderWithLpse } from '@/lib/types'
 import { cacheGet, cacheSet, CACHE_TTLS } from '@/lib/cache'
@@ -39,6 +42,8 @@ export async function GET(request: NextRequest) {
   let total = 0
 
   try {
+    const prisma = await getPrisma()
+
     if (filters.search && shouldUseFtsSearch()) {
       const result = await searchTenderIds(filters, { skip, limit })
       monitoring.recordDbQuery(routeName, 2)

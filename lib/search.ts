@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
-import prisma from '@/lib/prisma'
 import { sanitizeInput, type TenderQueryFilters } from '@/lib/transform'
+
+const getPrisma = () => import('@/lib/prisma').then(m => m.default)
 
 export type TenderSearchFilters = TenderQueryFilters
 
@@ -116,6 +117,7 @@ export async function searchTenderIds(
   filters: TenderSearchFilters,
   pagination: PaginationOptions
 ) {
+  const prisma = await getPrisma()
   const cleanedSearch = sanitizeInput(filters.search, 200) || ''
   const conditions = buildFtsConditions(filters, cleanedSearch)
   const whereSql = conditions.length

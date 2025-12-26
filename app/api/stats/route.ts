@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+
+const getPrisma = () => import('@/lib/prisma').then(m => m.default)
 import { ApiResponse, ApiTenderWithLpse, TenderStats } from '@/lib/types'
 import { cacheGet, cacheSet, warmCacheOnce, CACHE_TTLS } from '@/lib/cache'
 import { lpseListKey, statsKey, tendersListKey } from '@/lib/cache-keys'
@@ -31,6 +34,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const prisma = await getPrisma()
+
     const [
       totalTenders,
       totalLpse,
