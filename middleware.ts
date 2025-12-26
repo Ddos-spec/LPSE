@@ -8,12 +8,15 @@ import {
 } from '@/lib/cache-keys'
 import { parseTendersQuery } from '@/lib/transform'
 
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+const ALLOWED_ORIGINS_RAW = process.env.ALLOWED_ORIGINS || ''
+const ALLOWED_ORIGINS = ALLOWED_ORIGINS_RAW
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
 
-const ALLOW_ANY_ORIGIN = ALLOWED_ORIGINS.includes('*')
+// Default to allowing all origins if ALLOWED_ORIGINS is not configured
+// This ensures the API works out of the box while still allowing explicit configuration
+const ALLOW_ANY_ORIGIN = ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes('*')
 
 function getCorsOrigin(origin: string | null) {
   if (!origin) return null
