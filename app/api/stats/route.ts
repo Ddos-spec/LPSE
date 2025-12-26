@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     const stats: TenderStats = {
       totalTenders,
       totalLpse,
-      avgNilaiPagu: avgResult._avg.nilai_pagu?.toNumber() || 0,
+      avgNilaiPagu: avgResult._avg.nilai_pagu ? Number(avgResult._avg.nilai_pagu) : 0,
       byKategori,
       byStatus,
       byProvinsi,
