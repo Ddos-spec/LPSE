@@ -319,7 +319,7 @@ function RecentTenderItem({ tender }: { tender: ApiTenderWithLpse }) {
           </div>
           <p className="font-medium line-clamp-1">{tender.nama_tender}</p>
           <p className="text-sm text-muted-foreground line-clamp-1">
-            {tender.lpse.nama_lpse}
+            {tender.lpse?.nama_lpse ?? '-'}
           </p>
         </div>
         <div className="text-right sm:text-left">

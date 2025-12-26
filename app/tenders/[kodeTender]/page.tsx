@@ -112,14 +112,14 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
         <InfoCard
           icon={Building2}
           label="LPSE"
-          value={tender.lpse.nama_lpse}
+          value={tender.lpse?.nama_lpse ?? '-'}
         />
         <InfoCard
           icon={MapPin}
           label="Lokasi"
           value={
-            tender.lpse.provinsi
-              ? `${tender.lpse.kota ? tender.lpse.kota + ', ' : ''}${tender.lpse.provinsi}`
+            tender.lpse?.provinsi
+              ? `${tender.lpse?.kota ? tender.lpse.kota + ', ' : ''}${tender.lpse?.provinsi}`
               : '-'
           }
         />
