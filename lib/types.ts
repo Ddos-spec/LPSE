@@ -22,11 +22,11 @@ export type ApiTender = Omit<Tender, 'nilai_pagu' | 'nilai_hps'> & {
 }
 
 export type ApiTenderWithLpse = ApiTender & {
-  lpse: Lpse
+  lpse: Lpse | null
 }
 
 export type ApiTenderFullDetail = ApiTender & {
-  lpse: Lpse
+  lpse: Lpse | null
   tender_details: TenderDetail | null
 }
 
