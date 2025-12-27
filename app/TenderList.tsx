@@ -10,7 +10,7 @@ import { TenderTableSkeleton, TenderCardGridSkeleton } from '@/components/Loadin
 import { NoResultsState, ErrorState } from '@/components/EmptyState'
 import type { ApiResponse, ApiTenderWithLpse, PaginationMeta } from '@/lib/types'
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
+const TENDERS_API = process.env.NEXT_PUBLIC_TENDERS_API || '/api/tenders'
 
 interface TenderListProps {
   searchParams: {
@@ -51,7 +51,7 @@ export function TenderList({ searchParams }: TenderListProps) {
         if (searchParams.nilai_min) params.set('nilai_min', searchParams.nilai_min)
         if (searchParams.nilai_max) params.set('nilai_max', searchParams.nilai_max)
 
-        const response = await fetch(`${API_BASE_URL}/api/tenders?${params.toString()}`)
+        const response = await fetch(`${TENDERS_API}?${params.toString()}`)
         const data: ApiResponse<ApiTenderWithLpse[]> = await response.json()
 
         if (!data.success) {
