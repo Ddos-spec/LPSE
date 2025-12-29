@@ -20,27 +20,33 @@ interface SearchSuggestion {
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const query = searchParams.get('q')?.trim() || ''
+  const skipCache = searchParams.get('nocache') === '1'
 
   if (!query || query.length < 2) {
     return NextResponse.json({
       success: true,
-      data: []
+      data: [],
+      debug: { reason: 'query too short', query }
     }, { headers: withCors() })
   }
 
-  const cacheKey = `search:suggestions:${query}`
+  const cacheKey = `search:suggestions:v2:${query}`
+  const isNumericSearch = looksLikeKodeTender(query)
 
-  // Check cache first
-  const cached = await cacheGet<SearchSuggestion[]>(cacheKey)
-  if (cached) {
-    return NextResponse.json({
-      success: true,
-      data: cached
-    }, {
-      headers: withCors({
-        'x-cache': 'HIT'
+  // Check cache first (unless bypassed)
+  if (!skipCache) {
+    const cached = await cacheGet<SearchSuggestion[]>(cacheKey)
+    if (cached) {
+      return NextResponse.json({
+        success: true,
+        data: cached,
+        debug: { cache: 'HIT', query, isNumericSearch }
+      }, {
+        headers: withCors({
+          'x-cache': 'HIT'
+        })
       })
-    })
+    }
   }
 
   try {
@@ -49,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Build where clause based on search type
     let whereClause: object
 
-    if (looksLikeKodeTender(query)) {
+    if (isNumericSearch) {
       // For numeric codes, search kode_tender and kode_rup with startsWith/contains
       whereClause = {
         OR: [
@@ -65,7 +71,8 @@ export async function GET(request: NextRequest) {
       if (tokens.length === 0) {
         return NextResponse.json({
           success: true,
-          data: []
+          data: [],
+          debug: { reason: 'no valid tokens', query }
         }, { headers: withCors() })
       }
 
@@ -116,7 +123,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: suggestions
+      data: suggestions,
+      debug: {
+        cache: 'MISS',
+        query,
+        isNumericSearch,
+        resultCount: suggestions.length,
+        whereClause: JSON.stringify(whereClause)
+      }
     }, {
       headers: withCors({
         'x-cache': 'MISS'
@@ -124,10 +138,12 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Search suggestions error:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('Search suggestions error:', errorMessage)
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch suggestions'
+      error: 'Failed to fetch suggestions',
+      debug: { errorMessage, query, isNumericSearch }
     }, {
       status: 500,
       headers: withCors()
