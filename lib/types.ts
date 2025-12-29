@@ -15,10 +15,12 @@ export interface PaginationMeta {
   hasMore: boolean
 }
 
-// API Types (Decimal converted to number)
-export type ApiTender = Omit<Tender, 'nilai_pagu' | 'nilai_hps'> & {
+// API Types (Decimal/BigInt converted to number)
+export type ApiTender = Omit<Tender, 'nilai_pagu' | 'nilai_hps' | 'bobot_teknis' | 'bobot_biaya'> & {
   nilai_pagu: number | null
   nilai_hps: number | null
+  bobot_teknis: number | null
+  bobot_biaya: number | null
 }
 
 export type ApiTenderWithLpse = ApiTender & {
