@@ -2,9 +2,11 @@ import { z } from 'zod'
 
 const MAX_TEXT_LENGTH = 160
 
-type NormalizedTender<T> = Omit<T, 'nilai_pagu' | 'nilai_hps'> & {
+type NormalizedTender<T> = Omit<T, 'nilai_pagu' | 'nilai_hps' | 'bobot_teknis' | 'bobot_biaya'> & {
   nilai_pagu: number | null
   nilai_hps: number | null
+  bobot_teknis: number | null
+  bobot_biaya: number | null
 }
 
 type NormalizedTenderDetail<T> = Omit<
@@ -124,6 +126,8 @@ export function normalizeTender<T extends Record<string, unknown>>(tender: T): N
     ...tender,
     nilai_pagu: toNumber(tender.nilai_pagu),
     nilai_hps: toNumber(tender.nilai_hps),
+    bobot_teknis: toNumber(tender.bobot_teknis),
+    bobot_biaya: toNumber(tender.bobot_biaya),
   } as NormalizedTender<T>
 }
 

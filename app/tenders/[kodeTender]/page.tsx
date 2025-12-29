@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -10,6 +9,10 @@ import {
   ExternalLink,
   Tag,
   Clock,
+  Users,
+  FileDown,
+  Scale,
+  Briefcase,
   Banknote,
   Info,
 } from 'lucide-react'
@@ -126,34 +129,96 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
         <InfoCard
           icon={Calendar}
           label="Tahun Anggaran"
-          value={tender.tahun_anggaran?.toString() || '-'}
+          value={tender.tahun_anggaran?.toString() ?? '-'}
         />
         <InfoCard
           icon={Clock}
           label="Tahap Saat Ini"
-          value={tender.tahap_saat_ini || '-'}
+          value={tender.tahap_saat_ini ?? '-'}
         />
         <InfoCard
           icon={Tag}
           label="Status"
-          value={tender.status_tender || '-'}
+          value={tender.status_tender ?? '-'}
         />
         <InfoCard
           icon={FileText}
           label="Kategori"
-          value={tender.kategori_pekerjaan || '-'}
+          value={tender.kategori_pekerjaan ?? '-'}
+        />
+        <InfoCard
+          icon={Briefcase}
+          label="Jenis Kontrak"
+          value={tender.jenis_kontrak ?? '-'}
+        />
+        <InfoCard
+          icon={Users}
+          label="Peserta Tender"
+          value={tender.peserta_tender?.toString() ?? '-'}
+        />
+        <InfoCard
+          icon={MapPin}
+          label="Lokasi Pekerjaan"
+          value={tender.lokasi_pekerjaan ?? '-'}
+        />
+        <InfoCard
+          icon={FileText}
+          label="Kode RUP"
+          value={tender.kode_rup ?? '-'}
+        />
+        <InfoCard
+          icon={Banknote}
+          label="Sumber Dana"
+          value={tender.sumber_dana ?? '-'}
+        />
+        <InfoCard
+          icon={Scale}
+          label="Reverse Auction"
+          value={tender.reverse_auction === null ? '-' : tender.reverse_auction ? 'Ya' : 'Tidak'}
+        />
+        <InfoCard
+          icon={Scale}
+          label="Bobot Teknis"
+          value={tender.bobot_teknis !== null ? `${tender.bobot_teknis}%` : '-'}
+        />
+        <InfoCard
+          icon={Scale}
+          label="Bobot Biaya"
+          value={tender.bobot_biaya !== null ? `${tender.bobot_biaya}%` : '-'}
         />
         <InfoCard
           icon={Calendar}
           label="Dibuat"
-          value={formatDateTime(tender.created_at)}
+          value={formatDateTime(tender.created_at) ?? '-'}
         />
         <InfoCard
           icon={Calendar}
           label="Diperbarui"
-          value={formatDateTime(tender.updated_at)}
+          value={formatDateTime(tender.updated_at) ?? '-'}
         />
       </div>
+
+      {/* PDF & Links Section */}
+      {(tender.pdf_uraian_pekerjaan || tender.jadwal_url) && (
+        <div className="flex flex-wrap gap-4 mb-8">
+          {tender.pdf_uraian_pekerjaan && (
+            <Button variant="outline" asChild>
+              <a href={tender.pdf_uraian_pekerjaan} target="_blank" rel="noopener noreferrer">
+                <FileDown className="h-4 w-4 mr-2" />
+                Uraian Pekerjaan
+              </a>
+            </Button>
+          )}
+          {tender.jadwal_url && (
+            <Button variant="outline" asChild>
+              <a href={tender.jadwal_url} target="_blank" rel="noopener noreferrer">
+                <Calendar className="h-4 w-4 mr-2" />
+                Jadwal Tender
+              </a>
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Requirements Section */}
       {details && (
@@ -252,6 +317,43 @@ function InfoCard({
   )
 }
 
+// Helper to format SBU requirement object
+function formatSbuRequirement(sbu: unknown): string {
+  if (!sbu) return '-'
+  if (typeof sbu === 'string') return sbu || '-'
+  if (typeof sbu === 'object' && sbu !== null) {
+    const obj = sbu as Record<string, unknown>
+    const parts: string[] = []
+    if (obj.jenis_izin) parts.push(String(obj.jenis_izin))
+    if (obj.bidang) parts.push(String(obj.bidang))
+    if (obj.klasifikasi) parts.push(String(obj.klasifikasi))
+    if (obj.sub_klasifikasi) parts.push(String(obj.sub_klasifikasi))
+    return parts.length > 0 ? parts.join(' - ') : '-'
+  }
+  return '-'
+}
+
+// Helper to format value, replacing null/undefined with '-'
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) return '-'
+  if (typeof value === 'string') return value.trim() || '-'
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak'
+  if (Array.isArray(value)) {
+    const formatted = value.map(v => formatValue(v)).filter(v => v !== '-')
+    return formatted.length > 0 ? formatted.join(', ') : '-'
+  }
+  if (typeof value === 'object') {
+    // Check if it's an SBU-like object
+    const obj = value as Record<string, unknown>
+    if ('bidang' in obj || 'jenis_izin' in obj) {
+      return formatSbuRequirement(obj)
+    }
+    return JSON.stringify(value)
+  }
+  return String(value) || '-'
+}
+
 function RequirementCard({
   title,
   data,
@@ -272,16 +374,19 @@ function RequirementCard({
   // Handle different data formats
   const renderData = () => {
     if (typeof data === 'string') {
-      return <p className="whitespace-pre-wrap">{data}</p>
+      return <p className="whitespace-pre-wrap">{data || '-'}</p>
     }
 
     if (Array.isArray(data)) {
+      if (data.length === 0) {
+        return <p className="text-muted-foreground">-</p>
+      }
       return (
         <ul className="space-y-2">
           {data.map((item, index) => (
             <li key={index} className="flex items-start gap-2">
               <span className="text-primary mt-1">•</span>
-              <span>{typeof item === 'string' ? item : JSON.stringify(item)}</span>
+              <span>{formatValue(item)}</span>
             </li>
           ))}
         </ul>
@@ -289,25 +394,32 @@ function RequirementCard({
     }
 
     if (typeof data === 'object') {
+      const entries = Object.entries(data as Record<string, unknown>)
+      if (entries.length === 0) {
+        return <p className="text-muted-foreground">-</p>
+      }
       return (
         <dl className="space-y-3">
-          {Object.entries(data as Record<string, unknown>).map(([key, value]) => (
-            <div key={key}>
-              <dt className="font-medium text-sm mb-1">{key}</dt>
-              <dd className="text-muted-foreground text-sm pl-4">
-                {typeof value === 'string'
-                  ? value
-                  : Array.isArray(value)
-                  ? value.join(', ')
-                  : JSON.stringify(value)}
-              </dd>
-            </div>
-          ))}
+          {entries.map(([key, value]) => {
+            // Format the key to be more readable
+            const formattedKey = key
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, c => c.toUpperCase())
+
+            return (
+              <div key={key}>
+                <dt className="font-medium text-sm mb-1">{formattedKey}</dt>
+                <dd className="text-muted-foreground text-sm pl-4">
+                  {formatValue(value)}
+                </dd>
+              </div>
+            )
+          })}
         </dl>
       )
     }
 
-    return <p>{String(data)}</p>
+    return <p>{formatValue(data)}</p>
   }
 
   return (

@@ -54,6 +54,16 @@ model Tender {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
   scraped_at              DateTime?
+  kode_rup                String?
+  sumber_dana             String?
+  jenis_kontrak           String?
+  reverse_auction         Boolean?
+  bobot_teknis            Decimal?
+  bobot_biaya             Decimal?
+  peserta_tender          Int?
+  lokasi_pekerjaan        String?
+  jadwal_url              String?
+  pdf_uraian_pekerjaan    String?
 
   lpse           Lpse?           @relation(fields: [lpse_id], references: [id], onDelete: Cascade)
   tender_details TenderDetail?
@@ -71,6 +81,7 @@ model TenderDetail {
   html_content            String?
   scraped_at              DateTime? @default(now())
   updated_at              DateTime? @default(now())
+  pdf_uraian_pekerjaan    String?
 
   tender Tender? @relation(fields: [tender_id], references: [id], onDelete: Cascade)
 
