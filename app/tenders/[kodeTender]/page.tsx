@@ -35,7 +35,7 @@ interface TenderDetailPageProps {
 
 async function getTender(kodeTender: string): Promise<ApiTenderFullDetail | null> {
   try {
-    const response = await fetch(`${TENDER_DETAIL_API}/${kodeTender}`, {
+    const response = await fetch(`${TENDER_DETAIL_API}?kodeTender=${kodeTender}`, {
       cache: 'no-store',
     })
 
@@ -105,14 +105,6 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
   const sumberDana = tender.sumber_dana || getDokumenValue('sumber_dana')
   const pdfUrl = findPdfUrl()
   const jadwalUrl = tender.jadwal_url || getDokumenValue('jadwal_url')
-
-  // Debug log for PDF URL
-  console.log('[DEBUG] PDF URL sources:', {
-    'tender.pdf_uraian_pekerjaan': tender.pdf_uraian_pekerjaan,
-    'details?.pdf_uraian_pekerjaan': details?.pdf_uraian_pekerjaan,
-    'dokumen_pengadaan': details?.dokumen_pengadaan,
-    'resolved_pdfUrl': pdfUrl,
-  })
 
   // Safe number display
   const formatBobot = (value: number | null | undefined): string => {
