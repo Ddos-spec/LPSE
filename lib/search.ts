@@ -17,11 +17,11 @@ export function shouldUseFtsSearch() {
   return SEARCH_MODE === 'fts'
 }
 
-// Check if search term looks like a kode_tender (numeric string 8-15 digits)
+// Check if search term looks like a kode_tender (numeric string, min 2 digits)
 export function looksLikeKodeTender(search?: string): boolean {
   if (!search) return false
   const cleaned = search.trim()
-  return /^\d{8,15}$/.test(cleaned)
+  return /^\d{2,}$/.test(cleaned)
 }
 
 export function getSearchTokens(search?: string) {
@@ -39,15 +39,13 @@ export function getSearchTokens(search?: string) {
 export function buildTenderWhere(filters: TenderSearchFilters): Prisma.TenderWhereInput {
   const andFilters: Prisma.TenderWhereInput[] = []
 
-  // If search looks like a numeric code (kode_tender or kode_rup), search both fields
+  // If search looks like a numeric code (kode_tender or kode_rup), use prefix match
   if (filters.search && looksLikeKodeTender(filters.search)) {
     const searchTerm = filters.search.trim()
     andFilters.push({
       OR: [
         { kode_tender: { startsWith: searchTerm } },
-        { kode_tender: { contains: searchTerm } },
         { kode_rup: { startsWith: searchTerm } },
-        { kode_rup: { contains: searchTerm } },
       ]
     })
   } else {
@@ -98,13 +96,13 @@ function buildFtsConditions(filters: TenderSearchFilters, searchTerm: string) {
   const conditions: Prisma.Sql[] = []
 
   if (searchTerm) {
-    // Check if search term looks like a kode_tender (numeric 8-15 digits)
-    const isNumericCode = /^\d{8,15}$/.test(searchTerm.trim())
+    // Check if search term looks like a kode_tender (numeric, min 2 digits)
+    const isNumericCode = /^\d{2,}$/.test(searchTerm.trim())
 
     if (isNumericCode) {
       // For numeric codes, search kode_tender and kode_rup directly
       conditions.push(
-        Prisma.sql`(t.kode_tender LIKE ${`%${searchTerm}%`} OR t.kode_rup LIKE ${`%${searchTerm}%`})`
+        Prisma.sql`(t.kode_tender LIKE ${`${searchTerm}%`} OR t.kode_rup LIKE ${`${searchTerm}%`})`
       )
     } else {
       // For text search, use FTS on nama_tender, nama_lpse, and also check kode fields

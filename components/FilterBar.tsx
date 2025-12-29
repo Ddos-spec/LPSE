@@ -16,6 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
+import type { ApiTenderWithLpse } from '@/lib/types'
 
 const KATEGORI_OPTIONS = [
   'Konstruksi',
@@ -99,10 +100,19 @@ export function FilterBar({ viewMode = 'table', onViewModeChange, className }: F
     const fetchSuggestions = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/tenders/search?q=${encodeURIComponent(search)}`)
+        const response = await fetch(`/api/tenders?search=${encodeURIComponent(search)}&limit=10`)
         const data = await response.json()
-        if (data.success) {
-          setSuggestions(data.data)
+        if (data.success && Array.isArray(data.data)) {
+          const nextSuggestions = (data.data as ApiTenderWithLpse[]).map((tender) => ({
+            id: tender.id,
+            kode_tender: tender.kode_tender,
+            nama_tender: tender.nama_tender,
+            kategori_pekerjaan: tender.kategori_pekerjaan ?? null,
+            status_tender: tender.status_tender ?? null,
+            lpse_nama: tender.lpse?.nama_lpse ?? null,
+            nilai_pagu: tender.nilai_pagu ?? null,
+          }))
+          setSuggestions(nextSuggestions)
           setShowSuggestions(true)
           setSelectedIndex(-1)
         }
