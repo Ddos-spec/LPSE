@@ -45,15 +45,18 @@ export async function GET(request: NextRequest) {
   try {
     const prisma = await getPrisma()
 
-    // Simplified query - bypass all FTS/complex logic for testing
+    // Build where clause from filters
+    const where = buildTenderWhere(filters)
+
     const [rows, count] = await Promise.all([
       prisma.tender.findMany({
+        where,
         take: limit,
         skip,
         orderBy: { created_at: 'desc' },
         include: { lpse: true },
       }),
-      prisma.tender.count(),
+      prisma.tender.count({ where }),
     ])
     monitoring.recordDbQuery(routeName, 2)
     tenders = rows
