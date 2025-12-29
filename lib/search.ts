@@ -192,8 +192,13 @@ export async function searchTenderIds(
     ${whereSql}
   `)
 
+  const kodeTenders = rows
+    .map(row => row.kode_tender)
+    .filter((kode): kode is string | number | bigint => kode !== null && kode !== undefined)
+    .map(kode => String(kode))
+
   return {
-    kodeTenders: rows.map(row => row.kode_tender),
+    kodeTenders,
     total: totalRows[0]?.total ?? 0,
   }
 }
