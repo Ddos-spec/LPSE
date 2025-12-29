@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Filter, X, Grid, List, Loader2, Building2, FileText } from 'lucide-react'
+
+const TENDERS_API = process.env.NEXT_PUBLIC_TENDERS_API || '/api/tenders'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -100,7 +102,7 @@ export function FilterBar({ viewMode = 'table', onViewModeChange, className }: F
     const fetchSuggestions = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/tenders?search=${encodeURIComponent(search)}&limit=10`)
+        const response = await fetch(`${TENDERS_API}?search=${encodeURIComponent(search)}&limit=10`)
         const data = await response.json()
         if (data.success && Array.isArray(data.data)) {
           const nextSuggestions = (data.data as ApiTenderWithLpse[]).map((tender) => ({
