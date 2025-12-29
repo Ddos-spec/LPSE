@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lpse {
+  id            Int      @id @default(autoincrement())
+  kode_lpse     Int      @unique
+  nama_lpse     String
+  url           String?
+  provinsi      String?
+  kota          String?
+  is_active     Boolean? @default(true)
+  last_scraped  DateTime?
+  scrape_status String?
+  total_tenders Int?     @default(0)
+  created_at    DateTime? @default(now())
+  updated_at    DateTime? @default(now())
+
+  tenders       Tender[]
+  scraping_logs ScrapingLog[]
+
+  @@map("lpse")
+}
+
+model Tender {
+  id                      Int      @id @default(autoincrement())
+  kode_tender             String   @unique
+  lpse_id                 Int?
+  nama_tender             String
+  nama_satker             String?
+  kategori_pekerjaan      String?
+  nilai_pagu              BigInt?
+  nilai_hps               BigInt?
+  metode_pemilihan        String?
+  metode_pengadaan        String?
+  metode_evaluasi         String?
+  cara_pembayaran         String?
+  jenis_penetapan_pemenang String?
+  instansi_satker         String?
+  status_tender           String?
+  tahap_saat_ini          String?
+  tanggal_buat            DateTime?
+  tanggal_paket_dibuat    DateTime?
+  tanggal_paket_tayang    DateTime?
+  url_detail              String?
+  tahun_anggaran          Int?
+  is_scraped              Boolean  @default(false)
+  is_active               Boolean  @default(true)
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+  scraped_at              DateTime?
+  kode_rup                String?
+  sumber_dana             String?
+  jenis_kontrak           String?
+  reverse_auction         Boolean?
+  bobot_teknis            Decimal?
+  bobot_biaya             Decimal?
+  peserta_tender          Int?
+  lokasi_pekerjaan        String?
+  jadwal_url              String?
+  pdf_uraian_pekerjaan    String?
+
+  lpse           Lpse?           @relation(fields: [lpse_id], references: [id], onDelete: Cascade)
+  tender_details TenderDetail?
+
+  @@map("tenders")
+}
+
+model TenderDetail {
+  id                      Int      @id @default(autoincrement())
+  tender_id               Int?     @unique
+  persyaratan_umum        Json?
+  persyaratan_teknis      Json?
+  persyaratan_kualifikasi Json?
+  dokumen_pengadaan       Json?
+  html_content            String?
+  scraped_at              DateTime? @default(now())
+  updated_at              DateTime? @default(now())
+  pdf_uraian_pekerjaan    String?
+
+  tender Tender? @relation(fields: [tender_id], references: [id], onDelete: Cascade)
+
+  @@map("tender_details")
+}
+
+model ScrapingLog {
+  id               Int      @id @default(autoincrement())
+  lpse_id          Int?
+  scrape_type      String?
+  status           String?
+  total_items      Int?
+  success_count    Int?
+  failed_count     Int?
+  error_message    String?
+  duration_seconds Int?
+  started_at       DateTime?
+  finished_at      DateTime? @default(now())
+
+  lpse Lpse? @relation(fields: [lpse_id], references: [id])
+
+  @@map("scraping_logs")
+}
