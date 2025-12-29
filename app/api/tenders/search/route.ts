@@ -18,38 +18,46 @@ interface SearchSuggestion {
 }
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const query = searchParams.get('q')?.trim() || ''
-  const skipCache = searchParams.get('nocache') === '1'
-
-  if (!query || query.length < 2) {
-    return NextResponse.json({
-      success: true,
-      data: [],
-      debug: { reason: 'query too short', query }
-    }, { headers: withCors() })
-  }
-
-  const cacheKey = `search:suggestions:v2:${query}`
-  const isNumericSearch = looksLikeKodeTender(query)
-
-  // Check cache first (unless bypassed)
-  if (!skipCache) {
-    const cached = await cacheGet<SearchSuggestion[]>(cacheKey)
-    if (cached) {
-      return NextResponse.json({
-        success: true,
-        data: cached,
-        debug: { cache: 'HIT', query, isNumericSearch }
-      }, {
-        headers: withCors({
-          'x-cache': 'HIT'
-        })
-      })
-    }
-  }
+  let query = ''
+  let isNumericSearch = false
 
   try {
+    const searchParams = request.nextUrl.searchParams
+    query = searchParams.get('q')?.trim() || ''
+    const skipCache = searchParams.get('nocache') === '1'
+
+    if (!query || query.length < 2) {
+      return NextResponse.json({
+        success: true,
+        data: [],
+        debug: { reason: 'query too short', query }
+      }, { headers: withCors() })
+    }
+
+    isNumericSearch = looksLikeKodeTender(query)
+    const cacheKey = `search:suggestions:v2:${query}`
+
+    // Check cache first (unless bypassed)
+    if (!skipCache) {
+      try {
+        const cached = await cacheGet<SearchSuggestion[]>(cacheKey)
+        if (cached) {
+          return NextResponse.json({
+            success: true,
+            data: cached,
+            debug: { cache: 'HIT', query, isNumericSearch }
+          }, {
+            headers: withCors({
+              'x-cache': 'HIT'
+            })
+          })
+        }
+      } catch (cacheError) {
+        console.warn('Cache read error:', cacheError)
+        // Continue without cache
+      }
+    }
+
     const prisma = await getPrisma()
 
     // Build where clause based on search type
@@ -118,8 +126,8 @@ export async function GET(request: NextRequest) {
       nilai_pagu: t.nilai_pagu ? Number(t.nilai_pagu) : null
     }))
 
-    // Cache for 5 minutes
-    void cacheSet(cacheKey, suggestions, 300)
+    // Cache for 5 minutes (fire and forget)
+    cacheSet(cacheKey, suggestions, 300).catch(() => {})
 
     return NextResponse.json({
       success: true,
@@ -128,8 +136,7 @@ export async function GET(request: NextRequest) {
         cache: 'MISS',
         query,
         isNumericSearch,
-        resultCount: suggestions.length,
-        whereClause: JSON.stringify(whereClause)
+        resultCount: suggestions.length
       }
     }, {
       headers: withCors({
@@ -139,11 +146,18 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    console.error('Search suggestions error:', errorMessage)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('Search suggestions error:', { errorMessage, errorStack, query })
+
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch suggestions',
-      debug: { errorMessage, query, isNumericSearch }
+      debug: {
+        errorMessage,
+        query,
+        isNumericSearch,
+        stack: process.env.NODE_ENV !== 'production' ? errorStack : undefined
+      }
     }, {
       status: 500,
       headers: withCors()
