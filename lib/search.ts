@@ -98,9 +98,24 @@ function buildFtsConditions(filters: TenderSearchFilters, searchTerm: string) {
   const conditions: Prisma.Sql[] = []
 
   if (searchTerm) {
-    conditions.push(
-      Prisma.sql`to_tsvector('simple', coalesce(t.nama_tender, '') || ' ' || coalesce(l.nama_lpse, '')) @@ websearch_to_tsquery('simple', ${searchTerm})`
-    )
+    // Check if search term looks like a kode_tender (numeric 8-15 digits)
+    const isNumericCode = /^\d{8,15}$/.test(searchTerm.trim())
+
+    if (isNumericCode) {
+      // For numeric codes, search kode_tender and kode_rup directly
+      conditions.push(
+        Prisma.sql`(t.kode_tender LIKE ${`%${searchTerm}%`} OR t.kode_rup LIKE ${`%${searchTerm}%`})`
+      )
+    } else {
+      // For text search, use FTS on nama_tender, nama_lpse, and also check kode fields
+      conditions.push(
+        Prisma.sql`(
+          to_tsvector('simple', coalesce(t.nama_tender, '') || ' ' || coalesce(l.nama_lpse, '')) @@ websearch_to_tsquery('simple', ${searchTerm})
+          OR t.kode_tender ILIKE ${`%${searchTerm}%`}
+          OR t.kode_rup ILIKE ${`%${searchTerm}%`}
+        )`
+      )
+    }
   }
 
   if (filters.kategori) {
