@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 const getPrisma = () => import('@/lib/prisma').then(m => m.default)
-import { cacheGet, cacheSet, CACHE_TTLS } from '@/lib/cache'
+import { cacheGet, cacheSet } from '@/lib/cache'
 import { withCors } from '@/lib/cors'
-import { sanitizeInput } from '@/lib/transform'
+import { looksLikeKodeTender, getSearchTokens } from '@/lib/search'
 
 interface SearchSuggestion {
   id: number
@@ -19,7 +19,7 @@ interface SearchSuggestion {
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const query = searchParams.get('q') || ''
+  const query = searchParams.get('q')?.trim() || ''
 
   if (!query || query.length < 2) {
     return NextResponse.json({
@@ -28,8 +28,7 @@ export async function GET(request: NextRequest) {
     }, { headers: withCors() })
   }
 
-  const sanitized = sanitizeInput(query)
-  const cacheKey = `search:suggestions:${sanitized}`
+  const cacheKey = `search:suggestions:${query}`
 
   // Check cache first
   const cached = await cacheGet<SearchSuggestion[]>(cacheKey)
@@ -47,16 +46,44 @@ export async function GET(request: NextRequest) {
   try {
     const prisma = await getPrisma()
 
+    // Build where clause based on search type
+    let whereClause: object
+
+    if (looksLikeKodeTender(query)) {
+      // For numeric codes, search kode_tender and kode_rup with startsWith/contains
+      whereClause = {
+        OR: [
+          { kode_tender: { startsWith: query } },
+          { kode_tender: { contains: query } },
+          { kode_rup: { startsWith: query } },
+          { kode_rup: { contains: query } },
+        ]
+      }
+    } else {
+      // For text search, use tokens and search across multiple fields
+      const tokens = getSearchTokens(query)
+      if (tokens.length === 0) {
+        return NextResponse.json({
+          success: true,
+          data: []
+        }, { headers: withCors() })
+      }
+
+      whereClause = {
+        AND: tokens.map(token => ({
+          OR: [
+            { kode_tender: { contains: token, mode: 'insensitive' } },
+            { kode_rup: { contains: token, mode: 'insensitive' } },
+            { nama_tender: { contains: token, mode: 'insensitive' } },
+            { lpse: { nama_lpse: { contains: token, mode: 'insensitive' } } },
+          ],
+        })),
+      }
+    }
+
     // Search for tenders matching the query
     const tenders = await prisma.tender.findMany({
-      where: {
-        OR: [
-          { nama_tender: { contains: sanitized, mode: 'insensitive' } },
-          { kode_tender: { contains: sanitized, mode: 'insensitive' } },
-          { kode_rup: { contains: sanitized, mode: 'insensitive' } },
-          { lpse: { nama_lpse: { contains: sanitized, mode: 'insensitive' } } }
-        ]
-      },
+      where: whereClause,
       take: 10,
       orderBy: { created_at: 'desc' },
       select: {
