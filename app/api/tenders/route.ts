@@ -8,7 +8,7 @@ import { ApiResponse, PaginationMeta, ApiTenderWithLpse } from '@/lib/types'
 import { cacheGet, cacheSet, CACHE_TTLS } from '@/lib/cache'
 import { tendersListKey } from '@/lib/cache-keys'
 import { parseTendersQuery, normalizeTenderList } from '@/lib/transform'
-import { buildTenderWhere, searchTenderIds, shouldUseFtsSearch } from '@/lib/search'
+import { buildTenderWhere, searchTenderIds } from '@/lib/search'
 import { monitoring } from '@/lib/monitoring'
 import { withCors } from '@/lib/cors'
 
@@ -45,22 +45,39 @@ export async function GET(request: NextRequest) {
   try {
     const prisma = await getPrisma()
 
-    // Build where clause from filters
-    const where = buildTenderWhere(filters)
+    if (filters.search) {
+      const { kodeTenders, total: searchTotal } = await searchTenderIds(filters, { skip, limit })
+      monitoring.recordDbQuery(routeName, 2)
+      total = searchTotal
 
-    const [rows, count] = await Promise.all([
-      prisma.tender.findMany({
-        where,
-        take: limit,
-        skip,
-        orderBy: { created_at: 'desc' },
-        include: { lpse: true },
-      }),
-      prisma.tender.count({ where }),
-    ])
-    monitoring.recordDbQuery(routeName, 2)
-    tenders = rows
-    total = count
+      if (kodeTenders.length > 0) {
+        tenders = await prisma.tender.findMany({
+          where: { kode_tender: { in: kodeTenders } },
+          orderBy: { created_at: 'desc' },
+          include: { lpse: true },
+        })
+        monitoring.recordDbQuery(routeName, 1)
+      } else {
+        tenders = []
+      }
+    } else {
+      // Build where clause from filters
+      const where = buildTenderWhere(filters)
+
+      const [rows, count] = await Promise.all([
+        prisma.tender.findMany({
+          where,
+          take: limit,
+          skip,
+          orderBy: { created_at: 'desc' },
+          include: { lpse: true },
+        }),
+        prisma.tender.count({ where }),
+      ])
+      monitoring.recordDbQuery(routeName, 2)
+      tenders = rows
+      total = count
+    }
 
     const totalPages = Math.ceil(total / limit)
     const hasMore = page < totalPages

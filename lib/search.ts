@@ -92,27 +92,42 @@ export function buildTenderWhere(filters: TenderSearchFilters): Prisma.TenderWhe
   return andFilters.length > 0 ? { AND: andFilters } : {}
 }
 
-function buildFtsConditions(filters: TenderSearchFilters, searchTerm: string) {
+function buildSearchConditions(filters: TenderSearchFilters, searchTerm: string) {
   const conditions: Prisma.Sql[] = []
 
-  if (searchTerm) {
-    // Check if search term looks like a kode_tender (numeric, min 2 digits)
-    const isNumericCode = /^\d{2,}$/.test(searchTerm.trim())
-
-    if (isNumericCode) {
-      // For numeric codes, search kode_tender and kode_rup directly
-      conditions.push(
-        Prisma.sql`(t.kode_tender LIKE ${`${searchTerm}%`} OR t.kode_rup LIKE ${`${searchTerm}%`})`
-      )
-    } else {
-      // For text search, use FTS on nama_tender, nama_lpse, and also check kode fields
+  const trimmedSearch = searchTerm.trim()
+  if (trimmedSearch) {
+    if (looksLikeKodeTender(trimmedSearch)) {
+      // Prefix match for numeric codes; cast to text to support numeric columns.
+      const prefix = `${trimmedSearch}%`
       conditions.push(
         Prisma.sql`(
-          to_tsvector('simple', coalesce(t.nama_tender, '') || ' ' || coalesce(l.nama_lpse, '')) @@ websearch_to_tsquery('simple', ${searchTerm})
-          OR t.kode_tender ILIKE ${`%${searchTerm}%`}
-          OR t.kode_rup ILIKE ${`%${searchTerm}%`}
+          COALESCE(t.kode_tender::text, '') LIKE ${prefix}
+          OR COALESCE(t.kode_rup::text, '') LIKE ${prefix}
         )`
       )
+    } else {
+      const tokens = getSearchTokens(trimmedSearch)
+      if (tokens.length > 0) {
+        if (shouldUseFtsSearch()) {
+          // FTS for text search; cast kode fields to text for safety.
+          conditions.push(
+            Prisma.sql`(
+              to_tsvector('simple', coalesce(t.nama_tender, '') || ' ' || coalesce(l.nama_lpse, '')) @@ websearch_to_tsquery('simple', ${trimmedSearch})
+              OR COALESCE(t.kode_tender::text, '') ILIKE ${`%${trimmedSearch}%`}
+              OR COALESCE(t.kode_rup::text, '') ILIKE ${`%${trimmedSearch}%`}
+            )`
+          )
+        } else {
+          const tokenConditions = tokens.map(token => Prisma.sql`(
+            COALESCE(t.kode_tender::text, '') ILIKE ${`%${token}%`}
+            OR COALESCE(t.kode_rup::text, '') ILIKE ${`%${token}%`}
+            OR COALESCE(t.nama_tender, '') ILIKE ${`%${token}%`}
+            OR COALESCE(l.nama_lpse, '') ILIKE ${`%${token}%`}
+          )`)
+          conditions.push(Prisma.sql`${Prisma.join(tokenConditions, ' AND ')}`)
+        }
+      }
     }
   }
 
@@ -155,7 +170,7 @@ export async function searchTenderIds(
 ) {
   const prisma = await getPrisma()
   const cleanedSearch = sanitizeInput(filters.search, 200) || ''
-  const conditions = buildFtsConditions(filters, cleanedSearch)
+  const conditions = buildSearchConditions(filters, cleanedSearch)
   const whereSql = conditions.length
     ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
     : Prisma.empty
@@ -163,7 +178,7 @@ export async function searchTenderIds(
   const rows = await prisma.$queryRaw<{ kode_tender: string }[]>(Prisma.sql`
     SELECT t.kode_tender
     FROM tenders t
-    JOIN lpse l ON l.id = t.lpse_id
+    LEFT JOIN lpse l ON l.id = t.lpse_id
     ${whereSql}
     ORDER BY t.created_at DESC
     LIMIT ${pagination.limit}
@@ -173,7 +188,7 @@ export async function searchTenderIds(
   const totalRows = await prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
     SELECT COUNT(*)::int AS total
     FROM tenders t
-    JOIN lpse l ON l.id = t.lpse_id
+    LEFT JOIN lpse l ON l.id = t.lpse_id
     ${whereSql}
   `)
 
