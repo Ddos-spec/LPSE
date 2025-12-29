@@ -5,12 +5,40 @@ import { buildTenderWhere, searchTenderIds } from '../lib/search.js'
 
 export const tendersRouter = Router()
 
-// GET /api/tenders - List tenders with filters
+// GET /api/tenders - List tenders with filters OR get single tender by kodeTender query
 tendersRouter.get('/', async (req, res) => {
   const startTime = Date.now()
 
   try {
     const query = req.query as Record<string, string | undefined>
+
+    // If kodeTender query param is provided, return single tender detail
+    if (query.kodeTender) {
+      const tender = await prisma.tender.findFirst({
+        where: { kode_tender: query.kodeTender },
+        include: {
+          lpse: true,
+          tender_details: true,
+        },
+      })
+
+      if (!tender) {
+        return res.status(404).json({
+          success: false,
+          error: 'Tender not found'
+        })
+      }
+
+      const duration = Date.now() - startTime
+      console.log(`GET /api/tenders?kodeTender=${query.kodeTender} - ${duration}ms`)
+
+      return res.json({
+        success: true,
+        data: tender
+      })
+    }
+
+    // Otherwise, list tenders with filters
     const { page, limit, skip, filters } = parseTendersQuery(query)
 
     let tenders: unknown[] = []
