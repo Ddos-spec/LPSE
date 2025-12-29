@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
-import { parseTendersQuery, normalizeTenderList } from '../lib/transform.js'
+import { parseTendersQuery, normalizeTenderList, serializeBigInt } from '../lib/transform.js'
 import { buildTenderWhere, searchTenderIds } from '../lib/search.js'
 
 export const tendersRouter = Router()
@@ -34,7 +34,7 @@ tendersRouter.get('/', async (req, res) => {
 
       return res.json({
         success: true,
-        data: tender
+        data: serializeBigInt(tender)
       })
     }
 
@@ -125,7 +125,7 @@ tendersRouter.get('/:kodeTender', async (req, res) => {
 
     res.json({
       success: true,
-      data: tender
+      data: serializeBigInt(tender)
     })
   } catch (error) {
     console.error('Error fetching tender detail:', error)

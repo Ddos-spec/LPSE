@@ -102,3 +102,22 @@ export function normalizeTender<T extends Record<string, unknown>>(tender: T) {
 export function normalizeTenderList<T extends Record<string, unknown>>(tenders: T[]) {
   return tenders.map(normalizeTender)
 }
+
+// Recursively convert BigInt to Number for JSON serialization
+export function serializeBigInt(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj
+  if (typeof obj === 'bigint') return Number(obj)
+  if (typeof obj === 'number') return obj
+  if (typeof obj === 'string') return obj
+  if (typeof obj === 'boolean') return obj
+  if (obj instanceof Date) return obj.toISOString()
+  if (Array.isArray(obj)) return obj.map(serializeBigInt)
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = serializeBigInt(value)
+    }
+    return result
+  }
+  return obj
+}
