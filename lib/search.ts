@@ -39,10 +39,16 @@ export function getSearchTokens(search?: string) {
 export function buildTenderWhere(filters: TenderSearchFilters): Prisma.TenderWhereInput {
   const andFilters: Prisma.TenderWhereInput[] = []
 
-  // If search looks like kode_tender, search by kode_tender with startsWith
+  // If search looks like a numeric code (kode_tender or kode_rup), search both fields
   if (filters.search && looksLikeKodeTender(filters.search)) {
+    const searchTerm = filters.search.trim()
     andFilters.push({
-      kode_tender: { startsWith: filters.search.trim() }
+      OR: [
+        { kode_tender: { startsWith: searchTerm } },
+        { kode_tender: { contains: searchTerm } },
+        { kode_rup: { startsWith: searchTerm } },
+        { kode_rup: { contains: searchTerm } },
+      ]
     })
   } else {
     // Normal text search
@@ -52,6 +58,7 @@ export function buildTenderWhere(filters: TenderSearchFilters): Prisma.TenderWhe
         AND: tokens.map(token => ({
           OR: [
             { kode_tender: { contains: token, mode: 'insensitive' } },
+            { kode_rup: { contains: token, mode: 'insensitive' } },
             { nama_tender: { contains: token, mode: 'insensitive' } },
             { lpse: { nama_lpse: { contains: token, mode: 'insensitive' } } },
           ],
