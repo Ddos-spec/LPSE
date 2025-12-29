@@ -175,7 +175,9 @@ export async function searchTenderIds(
     ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
     : Prisma.empty
 
-  const rows = await prisma.$queryRaw<{ kode_tender: string }[]>(Prisma.sql`
+  const rows = await prisma.$queryRaw<
+    Array<{ kode_tender: string | number | bigint | null }>
+  >(Prisma.sql`
     SELECT t.kode_tender
     FROM tenders t
     LEFT JOIN lpse l ON l.id = t.lpse_id
