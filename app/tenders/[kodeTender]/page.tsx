@@ -15,6 +15,8 @@ import {
   Briefcase,
   Banknote,
   Info,
+  Download,
+  ShieldCheck,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -98,14 +100,28 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
           )}
         </div>
 
-        {tender.url_detail && (
-          <Button asChild>
-            <a href={tender.url_detail} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Lihat Dokumen Asli
-            </a>
+        <div className="flex flex-wrap gap-3">
+          {tender.url_detail && (
+            <Button asChild>
+              <a href={tender.url_detail} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Lihat Dokumen Asli
+              </a>
+            </Button>
+          )}
+          {tender.pdf_uraian_pekerjaan && (
+            <Button variant="outline" asChild>
+              <a href={tender.pdf_uraian_pekerjaan} target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4 mr-2" />
+                Download Ringkasan
+              </a>
+            </Button>
+          )}
+          <Button variant="secondary" disabled>
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Verifikator
           </Button>
-        )}
+        </div>
       </div>
 
       <Separator className="mb-8" />
@@ -197,28 +213,6 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
           value={formatDateTime(tender.updated_at) ?? '-'}
         />
       </div>
-
-      {/* PDF & Links Section */}
-      {(tender.pdf_uraian_pekerjaan || tender.jadwal_url) && (
-        <div className="flex flex-wrap gap-4 mb-8">
-          {tender.pdf_uraian_pekerjaan && (
-            <Button variant="outline" asChild>
-              <a href={tender.pdf_uraian_pekerjaan} target="_blank" rel="noopener noreferrer">
-                <FileDown className="h-4 w-4 mr-2" />
-                Uraian Pekerjaan
-              </a>
-            </Button>
-          )}
-          {tender.jadwal_url && (
-            <Button variant="outline" asChild>
-              <a href={tender.jadwal_url} target="_blank" rel="noopener noreferrer">
-                <Calendar className="h-4 w-4 mr-2" />
-                Jadwal Tender
-              </a>
-            </Button>
-          )}
-        </div>
-      )}
 
       {/* Requirements Section */}
       {details && (
