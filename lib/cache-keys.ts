@@ -1,4 +1,4 @@
-export const CACHE_VERSION = 'v1'
+export const CACHE_VERSION = 'v2'
 
 export const CACHE_TTL_SECONDS = {
   tenders: 60 * 60 * 6,
