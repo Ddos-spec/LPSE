@@ -150,7 +150,7 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
           )}
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           {tender.url_detail && (
             <Button asChild>
               <a href={tender.url_detail} target="_blank" rel="noopener noreferrer">
@@ -161,9 +161,9 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
           )}
           {pdfUrl && (
             <Button variant="outline" asChild>
-              <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+              <a href={pdfUrl} download>
                 <Download className="h-4 w-4 mr-2" />
-                Download Ringkasan
+                Download Ringkasan Pekerjaan
               </a>
             </Button>
           )}
