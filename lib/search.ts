@@ -17,6 +17,13 @@ export function shouldUseFtsSearch() {
   return SEARCH_MODE === 'fts'
 }
 
+// Check if search term looks like a kode_tender (numeric string 8-15 digits)
+export function looksLikeKodeTender(search?: string): boolean {
+  if (!search) return false
+  const cleaned = search.trim()
+  return /^\d{8,15}$/.test(cleaned)
+}
+
 export function getSearchTokens(search?: string) {
   if (!search) return []
   const cleaned = sanitizeInput(search, 200)
@@ -32,16 +39,25 @@ export function getSearchTokens(search?: string) {
 export function buildTenderWhere(filters: TenderSearchFilters): Prisma.TenderWhereInput {
   const andFilters: Prisma.TenderWhereInput[] = []
 
-  const tokens = getSearchTokens(filters.search)
-  if (tokens.length > 0) {
+  // If search looks like kode_tender, search by kode_tender with startsWith
+  if (filters.search && looksLikeKodeTender(filters.search)) {
     andFilters.push({
-      AND: tokens.map(token => ({
-        OR: [
-          { nama_tender: { contains: token, mode: 'insensitive' } },
-          { lpse: { nama_lpse: { contains: token, mode: 'insensitive' } } },
-        ],
-      })),
+      kode_tender: { startsWith: filters.search.trim() }
     })
+  } else {
+    // Normal text search
+    const tokens = getSearchTokens(filters.search)
+    if (tokens.length > 0) {
+      andFilters.push({
+        AND: tokens.map(token => ({
+          OR: [
+            { kode_tender: { contains: token, mode: 'insensitive' } },
+            { nama_tender: { contains: token, mode: 'insensitive' } },
+            { lpse: { nama_lpse: { contains: token, mode: 'insensitive' } } },
+          ],
+        })),
+      })
+    }
   }
 
   if (filters.kategori) {

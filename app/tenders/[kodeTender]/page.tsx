@@ -62,6 +62,27 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
 
   const details = tender.tender_details
 
+  // Helper to extract value from dokumen_pengadaan as fallback
+  const getDokumenValue = (key: string): string | null => {
+    if (!details?.dokumen_pengadaan) return null
+    const dok = details.dokumen_pengadaan as Record<string, unknown>
+    const value = dok[key]
+    if (value === null || value === undefined) return null
+    return String(value)
+  }
+
+  // Get values with fallback from dokumen_pengadaan
+  const kodeRup = tender.kode_rup || getDokumenValue('kode_rup')
+  const sumberDana = tender.sumber_dana || getDokumenValue('sumber_dana')
+  const pdfUrl = tender.pdf_uraian_pekerjaan || details?.pdf_uraian_pekerjaan || getDokumenValue('pdf_uraian_pekerjaan')
+  const jadwalUrl = tender.jadwal_url || getDokumenValue('jadwal_url')
+
+  // Safe number display
+  const formatBobot = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return '-'
+    return `${value}%`
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Breadcrumb */}
@@ -109,9 +130,9 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
               </a>
             </Button>
           )}
-          {tender.pdf_uraian_pekerjaan && (
+          {pdfUrl && (
             <Button variant="outline" asChild>
-              <a href={tender.pdf_uraian_pekerjaan} target="_blank" rel="noopener noreferrer">
+              <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
                 <Download className="h-4 w-4 mr-2" />
                 Download Ringkasan
               </a>
@@ -180,27 +201,27 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
         <InfoCard
           icon={FileText}
           label="Kode RUP"
-          value={tender.kode_rup ?? '-'}
+          value={kodeRup ?? '-'}
         />
         <InfoCard
           icon={Banknote}
           label="Sumber Dana"
-          value={tender.sumber_dana ?? '-'}
+          value={sumberDana ?? '-'}
         />
         <InfoCard
           icon={Scale}
           label="Reverse Auction"
-          value={tender.reverse_auction === null ? '-' : tender.reverse_auction ? 'Ya' : 'Tidak'}
+          value={tender.reverse_auction == null ? '-' : tender.reverse_auction ? 'Ya' : 'Tidak'}
         />
         <InfoCard
           icon={Scale}
           label="Bobot Teknis"
-          value={tender.bobot_teknis !== null ? `${tender.bobot_teknis}%` : '-'}
+          value={formatBobot(tender.bobot_teknis)}
         />
         <InfoCard
           icon={Scale}
           label="Bobot Biaya"
-          value={tender.bobot_biaya !== null ? `${tender.bobot_biaya}%` : '-'}
+          value={formatBobot(tender.bobot_biaya)}
         />
         <InfoCard
           icon={Calendar}
