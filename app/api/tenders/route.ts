@@ -17,6 +17,11 @@ type TenderWithLpse = Prisma.TenderGetPayload<{ include: { lpse: true } }>
 export async function GET(request: NextRequest) {
   const startTime = performance.now()
   const { page, limit, skip, filters } = parseTendersQuery(request.nextUrl.searchParams)
+
+  // Debug: log filters
+  console.log('[DEBUG] Parsed filters:', JSON.stringify(filters))
+  console.log('[DEBUG] Search param:', filters.search)
+
   const cacheKey = tendersListKey({ page, limit, ...filters })
   const bypassCache = request.headers.get('x-cache-bypass') === '1'
   const routeName = 'api.tenders'
@@ -47,6 +52,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause from filters
     const where = buildTenderWhere(filters)
+    console.log('[DEBUG] Where clause:', JSON.stringify(where))
 
     const [rows, count] = await Promise.all([
       prisma.tender.findMany({

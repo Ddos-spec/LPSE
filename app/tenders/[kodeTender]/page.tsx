@@ -35,7 +35,7 @@ interface TenderDetailPageProps {
 
 async function getTender(kodeTender: string): Promise<ApiTenderFullDetail | null> {
   try {
-    const response = await fetch(`${TENDER_DETAIL_API}?kodeTender=${kodeTender}`, {
+    const response = await fetch(`${TENDER_DETAIL_API}/${kodeTender}`, {
       cache: 'no-store',
     })
 
@@ -71,11 +71,48 @@ export default async function TenderDetailPage({ params }: TenderDetailPageProps
     return String(value)
   }
 
+  // Helper to find PDF URL from multiple possible field names
+  const findPdfUrl = (): string | null => {
+    // Check tender fields first
+    if (tender.pdf_uraian_pekerjaan) return tender.pdf_uraian_pekerjaan
+
+    // Check tender_details fields
+    if (details?.pdf_uraian_pekerjaan) return details.pdf_uraian_pekerjaan
+
+    // Check dokumen_pengadaan with multiple possible field names
+    const possiblePdfFields = [
+      'pdf_uraian_pekerjaan',
+      'url_dokumen',
+      'url_pdf',
+      'link_pdf',
+      'ringkasan_url',
+      'file_ringkasan',
+      'pdf_url',
+      'dokumen_url',
+    ]
+
+    for (const field of possiblePdfFields) {
+      const value = getDokumenValue(field)
+      if (value && value.includes('.pdf')) return value
+      if (value && value.startsWith('http')) return value
+    }
+
+    return null
+  }
+
   // Get values with fallback from dokumen_pengadaan
   const kodeRup = tender.kode_rup || getDokumenValue('kode_rup')
   const sumberDana = tender.sumber_dana || getDokumenValue('sumber_dana')
-  const pdfUrl = tender.pdf_uraian_pekerjaan || details?.pdf_uraian_pekerjaan || getDokumenValue('pdf_uraian_pekerjaan')
+  const pdfUrl = findPdfUrl()
   const jadwalUrl = tender.jadwal_url || getDokumenValue('jadwal_url')
+
+  // Debug log for PDF URL
+  console.log('[DEBUG] PDF URL sources:', {
+    'tender.pdf_uraian_pekerjaan': tender.pdf_uraian_pekerjaan,
+    'details?.pdf_uraian_pekerjaan': details?.pdf_uraian_pekerjaan,
+    'dokumen_pengadaan': details?.dokumen_pengadaan,
+    'resolved_pdfUrl': pdfUrl,
+  })
 
   // Safe number display
   const formatBobot = (value: number | null | undefined): string => {
