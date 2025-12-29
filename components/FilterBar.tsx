@@ -17,6 +17,10 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 
+// Use backend API URL for search suggestions
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ''
+const SEARCH_API = API_BASE_URL ? `${API_BASE_URL}/api/tenders/search` : '/api/tenders/search'
+
 const KATEGORI_OPTIONS = [
   'Konstruksi',
   'Jasa Konsultansi Badan Usaha',
@@ -99,7 +103,7 @@ export function FilterBar({ viewMode = 'table', onViewModeChange, className }: F
     const fetchSuggestions = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/tenders/search?q=${encodeURIComponent(search)}`)
+        const response = await fetch(`${SEARCH_API}?q=${encodeURIComponent(search)}`)
         const data = await response.json()
         if (data.success) {
           setSuggestions(data.data)
